@@ -10,7 +10,7 @@ import itertools
 import re
 import gc
 
-#rna_blast_file = sys.argv[2]
+#rna_blast_file = sys.argv[2] # this has to change
 #protein_blast_file = sys.argv[3]
 
 #sys.argv[1] = modified gff file (modified to only have gene and ncRNA)
@@ -20,7 +20,7 @@ import gc
 ## where/name
 #sys.argv[3] = protein blast file
 ## where/name
-#sys.argv[4] = protein file
+#sys.argv[4] = protein file # this has to change
 ## where/name
 
 window_length = 4 ### this can change, theoretically. This is telling the script to find 4 upstream genes and 4 downstream genes
@@ -152,3 +152,97 @@ def testing_functions_1to3(o1, o2, o3_2L, o3_2R, o3_3L, o3_3R, o3_4, o3_X, o3_Y)
            # print o2
         
 testing_functions_1to3(mel_gff_obj, mel_rna_strand_dic, dic_2L, dic_2R, dic_3L, dic_3R, dic_4, dic_X, dic_Y)
+
+def indexing_location(rna_strand_dict, dict_chrom, p2g_dict):
+    """This function makes a dictionary with upstream genes and downstream genes for each melanogaster lncRNA, I sometimes refer to it as the front-back dictionary. This function has to be run for each chromosome and/or chromosome arm."""
+    fbgn_id_dict = {}
+    chrom = dict_chrom["chrom_name"]# there's a "chrom_name" key in each dictionary, to make life easier
+    del dict_chrom["chrom_name"] #made a copy of this and then deleted it, I think this is so I can repeat this for each chromosome dictionary
+    list_chrom = dict_chrom.keys() #making an ordered list of the key in location_dic. The keys are the start of the gene
+    numbers_chrom = [int(x) for x in list_chrom]
+    sorted_chrom = sorted(numbers_chrom)
+    print sorted_chrom
+    print "sorted_chrom length:", len(sorted_chrom)
+    for k,v in rna_strand_dict.iteritems():
+        print "This is k, v:", k, v 
+        rna_chrom = v[2]
+        start = v[1]
+        print "this is chrom:", chrom
+        if rna_chrom == chrom:
+            print "%s == %s" %(rna_chrom, chrom)
+        
+        rna_index = sorted_chrom.index(int(start))
+        up_counter = 1
+        down_counter = 1
+        uplist, downlist = [], []
+        
+        while len(uplist) < window_length:
+            print "rna_index:", rna_index
+            try:
+                print sorted_chrom[rna_index- up_counter]
+                print "What is in loc dic", dict_chrom.get(str(sorted_chrom[rna_index - up_counter]))
+                print "What is in v", v
+                for i in dict_chrom.get(str(sorted_chrom[rna_index- up_counter])):
+                    print "This is i", i
+                    try:
+                        print "p2g", p2g_dict[i]
+                    except KeyError:
+                        print "This is probably and RNA", i
+                print "this shit is done"
+            except IndexError:
+                print "this is up_counter", up_counter
+                pass
+
+            try:
+                for i in dict_chrom.get(str(sorted_chrom[rna_index - up_counter])):
+                    if re.search("FBpp*", i):
+                        uplist.append(i)
+                        break
+                    up_counter += 1
+            except IndexError:
+                note = 'no_more_genes'
+                uplist.append(note)
+                print "reached end of list"
+                break
+        print "This is uplist"
+        print uplist
+
+        while len(downlist) < window_length:
+            try:
+                for i in dict_chrom.get(str(sorted_chrom[rna_index + down_counter])):
+                    if re.search("FBpp*", i):
+                        downlist.append(i)
+                        break
+                down_counter += 1
+
+            except IndexError:
+                note1 = 'no_more_genes'
+                downlist.append(note1)
+                print "This number gave me a problem", rna_index + down_counter
+                break
+        fbgn_id_dict[k]= uplist, downlist
+
+    print fbgn_id_dict
+    return fbgn_id_dict
+
+def match_pp_to_gn():
+    """This reads in the protein file, and finds the gn name associated with the protein"""
+    pp_to_gn_dict = {}
+    protein = sys.argv[2]
+    with open(protein, 'r') as p:
+        for line in p:
+            if line.startswith('>'):
+                data = line.strip().split(';')
+                #print data
+                chrom = re.findall('loc=(\S+):', data[1])
+                #print chrom
+                pp = data[2].split('=')[1]
+                gn = data[4].split(',')[0].split('=')[1]
+                pp_to_gn_dict[pp]= [gn, chrom[0]]
+
+            else:
+                continue
+    return pp_to_gn_dict
+
+protein_to_gene_dict = match_pp_to_gn()
+up_down_protein_dic_2L = indexing_location(mel_rna_strand_dic, dic_2L, protein_to_gene_dict)

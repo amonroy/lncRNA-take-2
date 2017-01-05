@@ -153,11 +153,11 @@ def testing_functions_1to3(o1, o2, o3_2L, o3_2R, o3_3L, o3_3R, o3_4, o3_X, o3_Y)
         
 testing_functions_1to3(mel_gff_obj, mel_rna_strand_dic, dic_2L, dic_2R, dic_3L, dic_3R, dic_4, dic_X, dic_Y)
 
-def indexing_location(rna_strand_dict, dict_chrom, p2g_dict):
+def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something different in another script with the protein... I used blast hits... not sure why I did that, but something to think about.
     """This function makes a dictionary with upstream genes and downstream genes for each melanogaster lncRNA, I sometimes refer to it as the front-back dictionary. This function has to be run for each chromosome and/or chromosome arm."""
     fbgn_id_dict = {}
     chrom = dict_chrom["chrom_name"]# there's a "chrom_name" key in each dictionary, to make life easier
-    del dict_chrom["chrom_name"] #made a copy of this and then deleted it, I think this is so I can repeat this for each chromosome dictionary
+    del dict_chrom["chrom_name"] #made a copy of this and then deleted it. This is so I can repeat this for each chromosome dictionary and grab the name of the chromosome with out too much trouble.
     list_chrom = dict_chrom.keys() #making an ordered list of the key in location_dic. The keys are the start of the gene
     numbers_chrom = [int(x) for x in list_chrom]
     sorted_chrom = sorted(numbers_chrom)
@@ -245,4 +245,82 @@ def match_pp_to_gn():
     return pp_to_gn_dict
 
 protein_to_gene_dict = match_pp_to_gn()
-up_down_protein_dic_2L = indexing_location(mel_rna_strand_dic, dic_2L, protein_to_gene_dict)
+up_down_protein_dic_2L = indexing_location(mel_rna_strand_dic, dic_2L, protein_to_gene_dict) # Have to do this for each chromosome/chromosome arm. a little tedious.
+up_down_protein_dic_2R= indexing_location(mel_rna_strand_dic, dic_2R, protein_to_gene_dict)
+up_down_protein_dic_3L= indexing_location(mel_rna_strand_dic, dic_3L, protein_to_gene_dict)
+up_down_protein_dic_3R= indexing_location(mel_rna_strand_dic, dic_3R, protein_to_gene_dict)
+up_down_protein_dic_4= indexing_location(mel_rna_strand_dic, dic_4, protein_to_gene_dict)
+up_down_protein_dic_X= indexing_location(mel_rna_strand_dic, dic_X, protein_to_gene_dict)
+up_down_protein_dic_Y= indexing_location(mel_rna_strand_dic, dic_Y, protein_to_gene_dict)
+
+set_2L = set(up_down_protein_dic_2L.iterkeys())
+set_2R = set(up_down_protein_dic_2R.iterkeys())
+set_3L =set(up_down_protein_dic_3L.iterkeys())
+set_3R = set(up_down_protein_dic_3R.iterkeys())
+set_4 = set(up_down_protein_dic_4.iterkeys())
+set_X= set(up_down_protein_dic_X.iterkeys())
+set_Y= set(up_down_protein_dic_Y.iterkeys())
+u = set.intersection(set_2L, set_2R, set_3L, set_3R, set_4, set_X, set_Y) #just want to verify that there are no overlapping keys
+print "This is intersections:",  u
+
+dicts = up_down_protein_dic_2L, up_down_protein_dic_2R, up_down_protein_dic_3L, up_down_protein_dic_3R, up_down_protein_dic_4, up_down_protein_dic_X, up_down_protein_dic_Y
+
+for d in dicts:
+    for k, v in d.iteritems():  # d.items() in Python 3+
+        super_dict[k] = v
+
+print "This is super_dict", super_dict
+
+
+def find_best_blast_hit(blast_file):
+    """This reads in your protein blast output (in format 6) and gives you the data for the best hit per protein. Makes a dictionary. Important: I am filtering out proteins and lncRNAs orthologs that have more than one 'best hit'"""
+    #print "In find_best_hit()"
+    import collections
+    best_hit_dict = {}
+    with open(blast_file, 'rU') as f:
+        for line in f:
+            data = line.strip().split('\t')
+    #print "this is data", data
+    key = data[0]
+    #print "this is key", key
+    details = [data[1], data[8], data[9], data[10]]
+    #print "these are details", details
+    if key in best_hit_dict:
+        if float(best_hit_dict[key][0][3]) < float(data[10]):
+            continue
+        if float(best_hit_dict[key][0][3])> float(data[10]):
+            del best_hit_dict[key]
+            best_hit_dict.setdefault(key, []).append(details)
+            #protein_dict[key]= [data[1], data[8], data[9], data[10]]
+        if float(best_hit_dict[key][0][3]) == float(data[10]):
+            best_hit_dict.setdefault(key, []).append(details)
+    else:
+        best_hit_dict.setdefault(key, []).append(details)
+        #protein_dict[key]= [data[1], data[8], data[9], data[10]]
+        #print protein_dict
+        a = []
+        for k,v in best_hit_dict.iteritems():
+            if len(v) == 1:
+                a.append(k)
+                bestest_hit_dict = {}
+                for i in a:
+                    bestest_hit_dict[i] = best_hit_dict[i][0]
+
+                    #print bestest_hit_dict
+                    #print len(best_hit_dict)
+                    #print len(bestest_hit_dict) (rna 2837: 2575 ; protein 30337: 17263)
+                    print bestest_hit_dict
+                    #'FBtr0334812': ['Scf_2L', '2081514', '2080524', '0.0'], 'FBtr0334815': ['Scf_3R', '17902553', '17901770', '0.0'], 'FBtr0334816': ['Scf_2L', '7123428', '7123185', '1.15e-117'], 'FBtr0332776': ['Scf_3L', '19790127', '19789715', '3.48e-160'], 'FBtr0344464': ['Scf_X', '20090299', '20089726', '0.0'], 'FBtr0347118': ['Scf_3L', '3148141', '3148551', '0.0'], 
+                    #'FBpp0298339': ['Scf_2R', '13592458', '13592060', '1.66e-70'], 'FBpp0112465': ['Scf_NODE_3978', '2785', '2522', '1.11e-52'], 'FBpp0297425': ['Scf_3L', '19713597', '19711975', '1.88e-157'], 'FBpp0086930': ['Scf_2R', '9424819', '9424103', '1.87e-145']
+                    return bestest_hit_dict
+                #'FBtr0342626': ['Scf_2L', '12192374', '12192839', '0.0'], 
+                #'FBtr0342625': ['Scf_X', '12617057', '12616737', '1.11e-121'], 
+                #'FBtr0339184': ['Scf_3R', '25355617', '25355121', '0.0'], 
+                #'FBtr0339187': ['Scf_3R', '26860087', '26860485', '7.04e-146'], 
+                #'FBtr0339186': ['Scf_3R', '26860019', '26860485', '0.0'],
+                
+                #'FBpp0078599': ['Scf_3R', '104719', '103040', '0.0'], 
+                #'FBpp0074019': ['Scf_X', '15309593', '15309057', '5.91e-114'], 
+                #'FBpp0071254': ['Scf_X', '8703331', '8704488', '0.0'], 
+                #'FBpp0071255': ['Scf_X', '8731616', '8732224', '1.09e-67'], 
+                #'FBpp0300231': ['Scf_X', '9387607', '9387074', '3.19e-77'], 

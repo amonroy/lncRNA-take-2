@@ -324,3 +324,24 @@ def find_best_blast_hit(blast_file):
                 #'FBpp0071254': ['Scf_X', '8703331', '8704488', '0.0'], 
                 #'FBpp0071255': ['Scf_X', '8731616', '8732224', '1.09e-67'], 
                 #'FBpp0300231': ['Scf_X', '9387607', '9387074', '3.19e-77'], 
+
+#need to write function that identifies id (FBtr0350598 and links it to "loc = Scf_X:join etc". I'll probably simplify that by grabbing the smallest and largest locations
+#>FBtr0350598 type=mRNA; loc=Scf_X:join(2802014..2802920,2814693..2814783,2822502..2822764,2822821..2823025,2825516..2825646,2829718..2832641,2832711..2835932,2835999..2836308,2836384..2836818,2836898..2837513); ID=FBtr0350598; name=Dsim\N-RB; dbxref=FlyBase_Annotation_IDs:Dsim\N-RB,FlyBase_Annotation_IDs:GD16631-RB,FlyBase:FBtr0350598,GNOMON:Dsim_gnomon_101_rna.16769621; MD5=d91a94abf402b28a62307616efffae81; length=9104; parent=FBgn0012846; release=r2.02; species=Dsim; 
+#GAAACAGATCGCTTTTTTCCAGTGGACGAAACGGTTGTGAAAGCGGACGAGCGTAAGGCAGACGAACCTGGAAAGCGCAG
+#AGCACAGTTCTCAACGTTTTTTTTTTTGGAAGTGAGTGCAACAACGCACGCAAACCGCGCAGCCAACAGGATATACAAAC
+#AAATCAATCACAGCAAGCAAATGCCATGAAATGAAAAGGATGGCCCCAGCGGGAAAGCCGTTCAGCAAGAGCAAGGAGTG
+#CCTGTCGAAGGGATAGCAACGAGAGAGAGAGAGAGAGGAAGAGAGAAACAAGGATTTTCGAAAAGTGTATCTACCTCGAG
+#TCGCGCGTGTGTGAGAGTGAGACGCAAGCCGAGTGCAAGAAGCGCAATACGCAAGCGTGCGGCGTCGGTTTGAATTTGAA
+#TTTGTGCTCGATCCTCGCGAAGAGAAAAGCAAGCAAAAGATACACGAAAAGCGTTCTTTTTTTGCCACTTTTTTTTTATG
+
+def transcript_location(some_file):
+    """This function reads in transcript file of interest and grabs name of transcript and the lowest and highest location and the scaffold"""
+    with open(some_file,'r') as f:
+        for line in f:
+            if line.startswith('>'):
+                data = line.strip().split(';')
+                print data
+                id = re.findall('>(\S+)\w', data[0])
+                print id
+                chrom = re.findall('loc=\S+):', data[1])
+                

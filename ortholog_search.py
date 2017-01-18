@@ -280,39 +280,37 @@ def find_best_blast_hit(blast_file):
     with open(blast_file, 'rU') as f:
         for line in f:
             data = line.strip().split('\t')
-    #print "this is data", data
-    key = data[0]
-    #print "this is key", key
-    details = [data[1], data[8], data[9], data[10]]
+            key = data[0]
+            details = [data[1], data[8], data[9], data[10]]
     #print "these are details", details
-    if key in best_hit_dict:
-        if float(best_hit_dict[key][0][3]) < float(data[10]):
-            continue
-        if float(best_hit_dict[key][0][3])> float(data[10]):
-            del best_hit_dict[key]
-            best_hit_dict.setdefault(key, []).append(details)
+            if key in best_hit_dict:
+                if float(best_hit_dict[key][0][3]) < float(data[10]):
+                    continue
+                if float(best_hit_dict[key][0][3])> float(data[10]):
+                    del best_hit_dict[key]
+                    best_hit_dict.setdefault(key, []).append(details)
             #protein_dict[key]= [data[1], data[8], data[9], data[10]]
-        if float(best_hit_dict[key][0][3]) == float(data[10]):
-            best_hit_dict.setdefault(key, []).append(details)
-    else:
-        best_hit_dict.setdefault(key, []).append(details)
+                if float(best_hit_dict[key][0][3]) == float(data[10]):
+                    best_hit_dict.setdefault(key, []).append(details)
+            else:
+                best_hit_dict.setdefault(key, []).append(details)
         #protein_dict[key]= [data[1], data[8], data[9], data[10]]
         #print protein_dict
         a = []
         for k,v in best_hit_dict.iteritems():
             if len(v) == 1:
                 a.append(k)
-                bestest_hit_dict = {}
-                for i in a:
-                    bestest_hit_dict[i] = best_hit_dict[i][0]
+            bestest_hit_dict = {}
+            for i in a:
+                bestest_hit_dict[i] = best_hit_dict[i][0]
 
                     #print bestest_hit_dict
                     #print len(best_hit_dict)
                     #print len(bestest_hit_dict) (rna 2837: 2575 ; protein 30337: 17263)
-                    print bestest_hit_dict
+            print bestest_hit_dict
                     #'FBtr0334812': ['Scf_2L', '2081514', '2080524', '0.0'], 'FBtr0334815': ['Scf_3R', '17902553', '17901770', '0.0'], 'FBtr0334816': ['Scf_2L', '7123428', '7123185', '1.15e-117'], 'FBtr0332776': ['Scf_3L', '19790127', '19789715', '3.48e-160'], 'FBtr0344464': ['Scf_X', '20090299', '20089726', '0.0'], 'FBtr0347118': ['Scf_3L', '3148141', '3148551', '0.0'], 
                     #'FBpp0298339': ['Scf_2R', '13592458', '13592060', '1.66e-70'], 'FBpp0112465': ['Scf_NODE_3978', '2785', '2522', '1.11e-52'], 'FBpp0297425': ['Scf_3L', '19713597', '19711975', '1.88e-157'], 'FBpp0086930': ['Scf_2R', '9424819', '9424103', '1.87e-145']
-                    return bestest_hit_dict
+            return bestest_hit_dict
                 #'FBtr0342626': ['Scf_2L', '12192374', '12192839', '0.0'], 
                 #'FBtr0342625': ['Scf_X', '12617057', '12616737', '1.11e-121'], 
                 #'FBtr0339184': ['Scf_3R', '25355617', '25355121', '0.0'], 
@@ -336,12 +334,20 @@ def find_best_blast_hit(blast_file):
 
 def transcript_location(some_file):
     """This function reads in transcript file of interest and grabs name of transcript and the lowest and highest location and the scaffold"""
+    import re
     with open(some_file,'r') as f:
         for line in f:
             if line.startswith('>'):
                 data = line.strip().split(';')
-                print data
+                print "This is data", data
                 id = re.findall('>(\S+)\w', data[0])
-                print id
-                chrom = re.findall('loc=\S+):', data[1])
+                print "This is id", id
+                chrom = re.findall('\W(loc=\S+):', data[1])
+                #might need to do some fancy stuff here. Like, if "join" is in location, do such and such", else" this other thing"
+                location = re.findall('\Wloc=\S+:(\S+)', data[1])
+                match = re.search('join', location[0])
+                if match:
+                	#do stuff
+                else:
+                	#do other stuff
                 

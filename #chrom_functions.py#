@@ -1,0 +1,61 @@
+
+
+def location_seq(chrom,start,stop):
+    """This function takes your chromosome string (ex/ 2L) and inputs the start and stop of a region of interest, and outputs the associated sequence"""
+    end_start = int(start)-1
+   # print start
+   # print end_start
+    end_stop = int(stop)
+   # print stop
+   # print end_stop
+#    with open (chrom, 'r') as f:
+ #       header = f.readline().rstrip()
+  #      for line in f:
+   #         sequence = line.strip('\n')
+    sequence_string = chrom[end_start:end_stop]
+
+    return sequence_string
+
+def read_chrom(file_name, chrom_name):
+    """This function reads in your all-chromosome-file and returns the chrom of your designation"""
+    #this seems to be working now, next up, write to new file! or... maybe just keep in memory?
+    # i also want it to tell me just the chromosome names
+    import re
+    sequence = ''
+    with open(file_name, 'r') as f:
+        chrom = False
+
+        for line in f:
+            if line.startswith('>') and not chrom:
+                data = line.strip()
+                header = re.findall('>(\S+)\s', data)
+                id = header[0]
+               # print "this is id", id
+                if id == chrom_name:
+                   # print "%s = %s" %(id, chrom_name)
+                    chrom = True
+                    idoi = id
+                   # print "Chrom is true"
+                
+            elif not line.startswith('>') and not chrom:
+                continue
+            
+            elif not line.startswith('>') and chrom:
+               # print "reading sequence"
+               # print "Chrom is true and I should be in the seq part",  line
+                #print line.strip()
+                #print type(line.strip())
+                sequence = ''.join((sequence, line.strip()))
+                #print line
+                #print "This is sequence", sequence
+                
+            
+            elif line.startswith('>') and chrom:
+                chrom = False
+                #print "Chrom is now false"
+                continue
+
+        #print "idoi", idoi
+       # print "sequence", sequence
+        chrom_string = sequence
+        return chrom_string

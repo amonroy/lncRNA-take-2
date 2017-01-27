@@ -335,7 +335,6 @@ def find_best_blast_hit(blast_file):
                 
 def transcript_location(some_file):
     """This function reads in transcript file of interest and grabs name of transcript and the lowest and highest location and the scaffold"""
-    #need to sort this lists to get the lowest and highest
     import re
     with open(some_file,'r') as f:
         for line in f:
@@ -350,13 +349,13 @@ def transcript_location(some_file):
                 #print "This is location", location
                 match = re.search('join', location[0])
                 if match:
-                    
+                    #print "MATCH", location[0]
                     ##MATCH join(8781076..8781272,8783212..8784440,8784501..8784970)
                     join_loc = re.findall('join\((\S+)\)', location[0])
                     #print join_loc
                     #print type(join_loc) # list
                     #loc_list =[]
-                    
+                    ###theres a problem here .. not getting all of the items in the list
                     for i in join_loc:
                     #print "i before split", i
                         no_comma = i.split(',')
@@ -370,9 +369,9 @@ def transcript_location(some_file):
                     print "this is final_list", final_list
             
                 else:
-                    #print "NOOOOOOO", location[0]
+                #print "NOOOOOOO", location[0]
                     loc = location[0].split('..')
                     print loc
-            
+            #8834315..8834682
 
 quit()

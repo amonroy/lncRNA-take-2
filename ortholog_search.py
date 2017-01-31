@@ -10,23 +10,25 @@ import itertools
 import re
 import gc
 
-#rna_blast_file = sys.argv[2] # this has to change
-#protein_blast_file = sys.argv[3]
+
 
 #sys.argv[1] = modified gff file (modified to only have gene and ncRNA)
 ## where/name out-take-2/1_dmel_protein_ncRNA_2017-01-04_out.txt
 ## made by what script? parse_gff3.py (in same directory as this script) 
-#sys.argv[2] = ncRNA blast file of species of interest
+#sys.argv[2]= protein fasta file
+#sys.argv[2] = ncRNA blast file of species of interest # this is wrong
 ## where/name
 #sys.argv[3] = protein blast file
 ## where/name
 #sys.argv[4] = protein file # this has to change
+#rna_blast_file = sys.argv[2] # this has to change
+#protein_blast_file = sys.argv[3]
 ## where/name
 
 window_length = 4 ### this can change, theoretically. This is telling the script to find 4 upstream genes and 4 downstream genes
 
 def mel_gff_list():
-    """This function takes the modified gff3 file (sys.argv[1]) and creates a list"""
+    """This function takes the modified gff3 file (sys.argv[1]) and creates a list. This should have all dmel proteins and all dmel lncRNAs"""
     mod_gff3 = sys.argv[1]
     with open(mod_gff3, 'r') as f:
         gff = [line.strip().split('\t') for line in f]
@@ -34,20 +36,28 @@ def mel_gff_list():
     return gff
 
 def mel_ncRNA_strand(list): #2 function
-    """This function takes the gff_list and makes an ncRNA_list"""
+    """This function takes the gff_list and makes an ncRNA_list """
     strand_dic = {} #initiates dictionary
     for i in list:
+    	#print i
+    	#quit()
         if i[2] == 'ncRNA':
             idRNA = i[8].split(';')[0].split('=')[1]
             strand = i[6]
-            start = i[3]
+            #start = i[3]
+            if int(i[3]) > int(i[4]):
+                print "THIS DID HAPPEN!!"
+            	start = i[4]
+            if int(i[4]) > int(i[3]):
+            	start = i[3]
+            	
             chrom = i[0]
             strand_dic[idRNA] = [strand, start,chrom]
     return strand_dic
 #'FBtr0335437': ['-', '11977640', '3R'], 'FBtr0332375': ['-', '15295636', '2L']
 
 def make_start_chrom_dictionary(list):
-    """This function makes a dictionary (named for the chromosome arm)  using the start location (the base pair number) as a key and the name of the protein as the entry."""
+    """This function makes a dictionary (named for the chromosome arm)  using the start location (the base pair number) as a key and the name of the protein as the entry. Uses mel gff list. As of right now drops out weird chromosomes"""
     #chrom_dict = collections.defaultdict(dict)
     chrom_list = ['2L','2R','3L','3R', '4', 'X','Y']
     chrom_2L = {}
@@ -114,13 +124,11 @@ def make_start_chrom_dictionary(list):
             except KeyError:
                 chrom_Y[start]= [name,]
         elif i[0] not in chrom_list: #this is taking out poorly mapped regions.
-            print "Don't care =", i[0]
+        	continue
+            #print "Don't care =", i[0]
     #print chrom_2L
     return chrom_2L, chrom_2R, chrom_3L, chrom_3R, chrom_4, chrom_X, chrom_Y
 
-mel_gff_obj = mel_gff_list()
-mel_rna_strand_dic = mel_ncRNA_strand(mel_gff_obj)
-dic_2L, dic_2R, dic_3L, dic_3R, dic_4, dic_X, dic_Y = make_start_chrom_dictionary(mel_gff_obj)
 
 def testing_functions_1to3(o1, o2, o3_2L, o3_2R, o3_3L, o3_3R, o3_4, o3_X, o3_Y):
     """This is me attempting to write a simple test to show that everything is ok... hopefully I'll figure out how to do unit tests properly, b/c I think this is going to be pretty lame."""
@@ -150,8 +158,6 @@ def testing_functions_1to3(o1, o2, o3_2L, o3_2R, o3_3L, o3_3R, o3_4, o3_X, o3_Y)
                 print "something might have gone screwy", j
            #'FBtr0332375': ['-', '15295636', '2L']   
            # print o2
-        
-testing_functions_1to3(mel_gff_obj, mel_rna_strand_dic, dic_2L, dic_2R, dic_3L, dic_3R, dic_4, dic_X, dic_Y)
 
 def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something different in another script with the protein... I used blast hits... not sure why I did that, but something to think about.
     """This function makes a dictionary with upstream genes and downstream genes for each melanogaster lncRNA, I sometimes refer to it as the front-back dictionary. This function has to be run for each chromosome and/or chromosome arm."""
@@ -159,70 +165,80 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
     chrom = dict_chrom["chrom_name"]# there's a "chrom_name" key in each dictionary, to make life easier
     del dict_chrom["chrom_name"] #made a copy of this and then deleted it. This is so I can repeat this for each chromosome dictionary and grab the name of the chromosome with out too much trouble.
     list_chrom = dict_chrom.keys() #making an ordered list of the key in location_dic. The keys are the start of the gene
+    #print list_chrom
+    #quit()
     numbers_chrom = [int(x) for x in list_chrom]
     sorted_chrom = sorted(numbers_chrom)
-    print sorted_chrom
-    print "sorted_chrom length:", len(sorted_chrom)
+    #print sorted_chrom
+    #print "sorted_chrom length:", len(sorted_chrom)
     for k,v in rna_strand_dict.iteritems():
-        print "This is k, v:", k, v 
+        #print "This is k, v:", k, v 
         rna_chrom = v[2]
         start = v[1]
-        print "this is chrom:", chrom
+        #print "this is chrom:", chrom
         if rna_chrom == chrom:
-            print "%s == %s" %(rna_chrom, chrom)
-        
-        rna_index = sorted_chrom.index(int(start))
-        up_counter = 1
-        down_counter = 1
-        uplist, downlist = [], []
-        
-        while len(uplist) < window_length:
-            print "rna_index:", rna_index
-            try:
-                print sorted_chrom[rna_index- up_counter]
-                print "What is in loc dic", dict_chrom.get(str(sorted_chrom[rna_index - up_counter]))
-                print "What is in v", v
-                for i in dict_chrom.get(str(sorted_chrom[rna_index- up_counter])):
-                    print "This is i", i
-                    try:
-                        print "p2g", p2g_dict[i]
-                    except KeyError:
-                        print "This is probably and RNA", i
-                print "this shit is done"
-            except IndexError:
-                print "this is up_counter", up_counter
-                pass
+            #print "%s == %s" %(rna_chrom, chrom)
+            rna_index = sorted_chrom.index(int(start))
+            up_counter = 1
+            down_counter = 1
+            uplist, downlist = [], []
+            while len(uplist) < window_length:
+                #print "rna_index:", rna_index
+                try:
+                    #print sorted_chrom[rna_index- up_counter]
+                    #print "What is in loc dic", dict_chrom.get(str(sorted_chrom[rna_index - up_counter]))
+                    #print "What is in v", v
+                    for i in dict_chrom.get(str(sorted_chrom[rna_index- up_counter])):
+                        #print "This is i", i
+                        try:
+                            p2g_dict[i]
+                        except KeyError:
+                            #print "This is probably and RNA", i
+                            continue
+                    #print "this shit is done"
+                except IndexError:
+                    #print "this is up_counter", up_counter
+                    pass
 
-            try:
-                for i in dict_chrom.get(str(sorted_chrom[rna_index - up_counter])):
-                    if re.search("FBpp*", i):
-                        uplist.append(i)
-                        break
+                try:
+                    for i in dict_chrom.get(str(sorted_chrom[rna_index - up_counter])):
+                        if re.search("FBpp*", i):
+                            try:
+                                uplist.append(p2g_dict[i]) #maybe change this to i[0] later
+                                break
+                            
+                            except KeyError:
+                                print "this is causing trouble up here", i
                     up_counter += 1
-            except IndexError:
-                note = 'no_more_genes'
-                uplist.append(note)
-                print "reached end of list"
-                break
-        print "This is uplist"
-        print uplist
+                            
+                except IndexError:
+                    note = 'no_more_genes'
+                    uplist.append(note)
+                    #print "reached end of list"
+                    break
+            #print "This is uplist"
+            #print uplist
 
-        while len(downlist) < window_length:
-            try:
-                for i in dict_chrom.get(str(sorted_chrom[rna_index + down_counter])):
-                    if re.search("FBpp*", i):
-                        downlist.append(i)
-                        break
-                down_counter += 1
+            while len(downlist) < window_length:
+                try:
+                    for i in dict_chrom.get(str(sorted_chrom[rna_index + down_counter])):
+                        if re.search("FBpp*", i):
+                            try:
+                                downlist.append(p2g_dict[i])
+                                break
+                            except KeyError:
+                            	print "This causing trouble", i
+                    down_counter += 1
 
-            except IndexError:
-                note1 = 'no_more_genes'
-                downlist.append(note1)
-                print "This number gave me a problem", rna_index + down_counter
-                break
-        fbgn_id_dict[k]= uplist, downlist
+                except IndexError:
+                    note1 = 'no_more_genes'
+                    downlist.append(note1)
+                    #print "This number gave me a problem", rna_index + down_counter
+                    break
+            fbgn_id_dict[k]= uplist, downlist
 
-    print fbgn_id_dict
+    print "THIS IS FB ME:", fbgn_id_dict
+    #print len(fbgn_id_dict)
     return fbgn_id_dict
 
 def match_pp_to_gn():
@@ -236,16 +252,28 @@ def match_pp_to_gn():
                 #print data
                 chrom = re.findall('loc=(\S+):', data[1])
                 #print chrom
+                #print data[2]
                 pp = data[2].split('=')[1]
                 gn = data[4].split(',')[0].split('=')[1]
                 pp_to_gn_dict[pp]= [gn, chrom[0]]
 
             else:
                 continue
+    print "P2G", pp_to_gn_dict
     return pp_to_gn_dict
+    
+mel_gff_obj = mel_gff_list()
+mel_rna_strand_dic = mel_ncRNA_strand(mel_gff_obj)
+dic_2L, dic_2R, dic_3L, dic_3R, dic_4, dic_X, dic_Y = make_start_chrom_dictionary(mel_gff_obj)       
+testing_functions_1to3(mel_gff_obj, mel_rna_strand_dic, dic_2L, dic_2R, dic_3L, dic_3R, dic_4, dic_X, dic_Y)
 
 protein_to_gene_dict = match_pp_to_gn()
+
 up_down_protein_dic_2L = indexing_location(mel_rna_strand_dic, dic_2L, protein_to_gene_dict) # Have to do this for each chromosome/chromosome arm. a little tedious.
+
+
+print "*" * 8
+print "finished up_down_protein_dic_2L"
 up_down_protein_dic_2R= indexing_location(mel_rna_strand_dic, dic_2R, protein_to_gene_dict)
 up_down_protein_dic_3L= indexing_location(mel_rna_strand_dic, dic_3L, protein_to_gene_dict)
 up_down_protein_dic_3R= indexing_location(mel_rna_strand_dic, dic_3R, protein_to_gene_dict)
@@ -262,14 +290,24 @@ set_X= set(up_down_protein_dic_X.iterkeys())
 set_Y= set(up_down_protein_dic_Y.iterkeys())
 u = set.intersection(set_2L, set_2R, set_3L, set_3R, set_4, set_X, set_Y) #just want to verify that there are no overlapping keys
 print "This is intersections:",  u
+#quit()
 
 dicts = up_down_protein_dic_2L, up_down_protein_dic_2R, up_down_protein_dic_3L, up_down_protein_dic_3R, up_down_protein_dic_4, up_down_protein_dic_X, up_down_protein_dic_Y
-
+super_dict = {}
 for d in dicts:
     for k, v in d.iteritems():  # d.items() in Python 3+
         super_dict[k] = v
 
 print "This is super_dict", super_dict
+#print "This is length", len(super_dict) # 2899
+
+#time = 0
+#for time < 10:
+#	for key, value in super_dict.iteritems():
+#		print "key:", key
+#		print "values:", values
+#		for o in values:
+			
 
 
 def find_best_blast_hit(blast_file):

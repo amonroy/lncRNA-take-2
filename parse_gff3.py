@@ -8,7 +8,7 @@ import datetime
 
 def parse_gff_nc_genes():
 	"""This function takes the Dmel gff file from argv[1] and parses it. 
-	It returns lines with 'ncRNA' and 'genes' in them. And removes the sequences.
+	It returns lines with 'ncRNA' and 'proteins' in them. And removes the sequences.
 	It uses sys and datetime"""
 	
 	gff3 = sys.argv[1]

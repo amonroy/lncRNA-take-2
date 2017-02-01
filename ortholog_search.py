@@ -1,4 +1,7 @@
 ## This is the script I am writing to search for lncRNA orthologs based on synteny (location in the genome
+### Jan 31 : so things to think about ... the end ortholog bit seems to be grabbing some weird stuff, see what you do at the point where there may be more than one protein at a start, and see if there's a way to manage that. Also, not all proteins will be in the ortholog part, so you have to do a try/except for that part.
+
+
 
 # how to run:
 #(command)
@@ -14,11 +17,12 @@ import gc
 
 #sys.argv[1] = modified gff file (modified to only have gene and ncRNA)
 ## where/name out-take-2/1_dmel_protein_ncRNA_2017-01-04_out.txt
-## made by what script? parse_gff3.py (in same directory as this script) 
-#sys.argv[2]= protein fasta file
-#sys.argv[2] = ncRNA blast file of species of interest # this is wrong
+## made by what script? parse_gff3.py (in same directory as this script)#sys.argv[2]= protein fasta file
+#sys.argv[3]= ortholog map file
+##
+##sys.argv[2] = ncRNA blast file of species of interest # this is wrong
 ## where/name
-#sys.argv[3] = protein blast file
+#sys.argv[3] = protein blast file #this is wrong
 ## where/name
 #sys.argv[4] = protein file # this has to change
 #rna_blast_file = sys.argv[2] # this has to change
@@ -165,8 +169,6 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
     chrom = dict_chrom["chrom_name"]# there's a "chrom_name" key in each dictionary, to make life easier
     del dict_chrom["chrom_name"] #made a copy of this and then deleted it. This is so I can repeat this for each chromosome dictionary and grab the name of the chromosome with out too much trouble.
     list_chrom = dict_chrom.keys() #making an ordered list of the key in location_dic. The keys are the start of the gene
-    #print list_chrom
-    #quit()
     numbers_chrom = [int(x) for x in list_chrom]
     sorted_chrom = sorted(numbers_chrom)
     #print sorted_chrom
@@ -237,7 +239,7 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
                     break
             fbgn_id_dict[k]= uplist, downlist
 
-    print "THIS IS FB ME:", fbgn_id_dict
+   # print "THIS IS FB ME:", fbgn_id_dict
     #print len(fbgn_id_dict)
     return fbgn_id_dict
 
@@ -259,7 +261,7 @@ def match_pp_to_gn():
 
             else:
                 continue
-    print "P2G", pp_to_gn_dict
+   # print "P2G", pp_to_gn_dict
     return pp_to_gn_dict
     
 mel_gff_obj = mel_gff_list()
@@ -290,7 +292,7 @@ set_X= set(up_down_protein_dic_X.iterkeys())
 set_Y= set(up_down_protein_dic_Y.iterkeys())
 u = set.intersection(set_2L, set_2R, set_3L, set_3R, set_4, set_X, set_Y) #just want to verify that there are no overlapping keys
 print "This is intersections:",  u
-#quit()
+
 
 dicts = up_down_protein_dic_2L, up_down_protein_dic_2R, up_down_protein_dic_3L, up_down_protein_dic_3R, up_down_protein_dic_4, up_down_protein_dic_X, up_down_protein_dic_Y
 super_dict = {}
@@ -298,16 +300,10 @@ for d in dicts:
     for k, v in d.iteritems():  # d.items() in Python 3+
         super_dict[k] = v
 
-print "This is super_dict", super_dict
+#print "This is super_dict", super_dict
+#'FBtr0343761': ([['FBgn0000479', 'X'], ['FBgn0000479', 'X'], ['FBgn0003374', 'X'], ['FBgn0003086', 'X']], [['FBgn0000479', 'X'], ['FBgn0000479', 'X'], ['FBgn0029656', 'X'], ['FBgn0000479', 'X']]), 'FBtr0343762': ([['FBgn0003867', '3R'], ['FBgn0038903', '3R'], ['FBgn0038902', '3R'], ['FBgn0027575', '3R']], [['FBgn0013759', '3R'], ['FBgn0013759', '3R'], ['FBgn0041229', '3R'], ['FBgn0045470', '3R']]
+#quit()
 #print "This is length", len(super_dict) # 2899
-
-#time = 0
-#for time < 10:
-#	for key, value in super_dict.iteritems():
-#		print "key:", key
-#		print "values:", values
-#		for o in values:
-			
 
 
 def find_best_blast_hit(blast_file):
@@ -412,5 +408,72 @@ def transcript_location(some_file):
                     loc = location[0].split('..')
                     print loc
             
+def mel_gene_set(dict): # this uses the flanking genes, specifically
+    """This function finds unique mel genes, and puts them in a set (what is returned), so we don't get the same coords twice. It takes fbgn_id_dict. This is so we have the mel genes that we need coordinates for in the non-mel species', ie we're using this to find the orthologs that we care about"""
+    mel_gene_set = set()
+    for k, v in dict.iteritems():
+        #v[0] is up, v[1] is down
+        print "this is v:", v
+        print "this is v[0]", v[0]
+        for mg in v[0]:
+            mel_gene_set.add(mg[0])
+        for mj in v[1]:
+            mel_gene_set.add(mj[0])
+    return mel_gene_set
+
+mel_set =  mel_gene_set(super_dict)
+#print "This is mel_set", mel_set
+
+def map_mel_gene_to_nonmel_ortho(set):
+    ### good news: this appears to work. Something to consider, however.  Perhaps what you should do is have an additional point for "strandedness" (+ or -) and make sure that coord[0] is in fact the 'earliest base'
+    """This function maps genes from mel_set to orthologs of nonmel species found in ortholog file, from flybase"""
+   ### FBgn_ID[0]      GeneSymbol[1]      Arm/Scaffold[2]    Location[3]        Strand[4]  Ortholog_FBgn_ID[5]        Ortholog_GeneSymbol[6]     Ortholog_Arm/Scaffold[7]   Ortholog_Location[8]      Ortholog_Strand[9] OrthoDB_Group_ID[10]
+#so far it looks like this is already written as coord[0] is always smaller than coord[1], so you just did that and don't need to use it.
+    mapping = dict()
+    fly = "Dsim" #this is hard coded, change that once you've finished debugging
+    with open(sys.argv[3], 'r') as orthos:
+        not_count = 0
+        yes_count = 0
+        for line in orthos:
+            if not line.startswith('#') and not line.startswith('\n'):
+                data = line.strip().split('\t')
+                if fly in data[6]:
+#                    print data
+ #                   quit()
+                    if data[0] in set:
+                        coord = data[8].split("..")
+                        direction =data[9]
+                        ortho_group = data[10]
+                        try:
+                            if 'nonp' in mapping[data[0]]:
+                                mapping[data[0]][data[5]] = [data[5], data[7], coord[0], coord[1], direction, ortho_group]
+                        except KeyError:
+                            mapping[data[0]] = {}
+                            mapping[data[0]]['nonp'] = [data[5],data[7], coord[0], coord[1], direction, ortho_group]
+                        yes_count = yes_count + 1
+                    if data[0] not in set:
+                        not_count = not_count +1 
+    return mapping
+
+orthos_gene_map = map_mel_gene_to_nonmel_ortho(mel_set)
+#print "this is orthos_gene_map", orthos_gene_map
+for sk, sv in super_dict.iteritems():
+    print sk
+    for si in sv[0]:
+        print "upstream!"
+        upstr = sv[0]
+        for ui in upstr:
+            print ui[0], ui[1]
+            print orthos_gene_map[ui[0]]
+           # print "that should have been the otrholog"
+        print upstr
+    for sj in sv[1]:
+        print "downstream"
+        dwstr = sv[1]
+        print dwstr
+        for di in dwstr:
+            print di[0], di[1]
+            print orthos_gene_map[ui[0]]
+           # print "that should have been the downstream ortholog"
 
 quit()

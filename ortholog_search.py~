@@ -1,4 +1,7 @@
 ## This is the script I am writing to search for lncRNA orthologs based on synteny (location in the genome
+### Jan 31 : so things to think about ... the end ortholog bit seems to be grabbing some weird stuff, see what you do at the point where there may be more than one protein at a start, and see if there's a way to manage that. Also, not all proteins will be in the ortholog part, so you have to do a try/except for that part.
+
+
 
 # how to run:
 #(command)
@@ -7,26 +10,26 @@
 import sys
 import collections
 import itertools
-import re
+qimport re
 import gc
 
 
+##!!!###!!! make below all part of "variable" file
+## make "fly" (Dsim, Dsec, ie fly species part of "variable file"
 
 #sys.argv[1] = modified gff file (modified to only have gene and ncRNA)
 ## where/name out-take-2/1_dmel_protein_ncRNA_2017-01-04_out.txt
 ## made by what script? parse_gff3.py (in same directory as this script)#sys.argv[2]= protein fasta file
-#sys.argv[3]= ortholog map file
+#sys.argv[3]= ortholog map file (from flybase)
 ##
-##sys.argv[2] = ncRNA blast file of species of interest # this is wrong
+##sys.argv[?] = ncRNA blast file of species of interest # this is wrong
 ## where/name
-#sys.argv[3] = protein blast file #this is wrong
+#sys.argv[?] = protein blast file #this is wrong
 ## where/name
-#sys.argv[4] = protein file # this has to change
 #rna_blast_file = sys.argv[2] # this has to change
-#protein_blast_file = sys.argv[3]
 ## where/name
 
-window_length = 4 ### this can change, theoretically. This is telling the script to find 4 upstream genes and 4 downstream genes
+window_length = 4 ### this can change, theoretically. This is telling the script to find 4 upstream genes and 4 downstream genes #make this part of "variable" file that I make
 
 def mel_gff_list():
     """This function takes the modified gff3 file (sys.argv[1]) and creates a list. This should have all dmel proteins and all dmel lncRNAs"""
@@ -168,35 +171,23 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
     list_chrom = dict_chrom.keys() #making an ordered list of the key in location_dic. The keys are the start of the gene
     numbers_chrom = [int(x) for x in list_chrom]
     sorted_chrom = sorted(numbers_chrom)
-    #print sorted_chrom
-    #print "sorted_chrom length:", len(sorted_chrom)
     for k,v in rna_strand_dict.iteritems():
-        #print "This is k, v:", k, v 
         rna_chrom = v[2]
         start = v[1]
-        #print "this is chrom:", chrom
         if rna_chrom == chrom:
-            #print "%s == %s" %(rna_chrom, chrom)
             rna_index = sorted_chrom.index(int(start))
             up_counter = 1
             down_counter = 1
             uplist, downlist = [], []
             while len(uplist) < window_length:
-                #print "rna_index:", rna_index
                 try:
-                    #print sorted_chrom[rna_index- up_counter]
-                    #print "What is in loc dic", dict_chrom.get(str(sorted_chrom[rna_index - up_counter]))
-                    #print "What is in v", v
                     for i in dict_chrom.get(str(sorted_chrom[rna_index- up_counter])):
-                        #print "This is i", i
                         try:
                             p2g_dict[i]
                         except KeyError:
-                            #print "This is probably and RNA", i
                             continue
-                    #print "this shit is done"
+
                 except IndexError:
-                    #print "this is up_counter", up_counter
                     pass
 
                 try:
@@ -207,16 +198,15 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
                                 break
                             
                             except KeyError:
-                                print "this is causing trouble up here", i
+                                continue # ask karl
+                                #don't know whether to put continue or what
+                                #print "this is causing trouble up here", i
                     up_counter += 1
                             
                 except IndexError:
                     note = 'no_more_genes'
                     uplist.append(note)
-                    #print "reached end of list"
                     break
-            #print "This is uplist"
-            #print uplist
 
             while len(downlist) < window_length:
                 try:
@@ -226,18 +216,16 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
                                 downlist.append(p2g_dict[i])
                                 break
                             except KeyError:
-                            	print "This causing trouble", i
+                                continue ## ask karl
+                            	#print "This causing trouble", i
                     down_counter += 1
 
                 except IndexError:
                     note1 = 'no_more_genes'
                     downlist.append(note1)
-                    #print "This number gave me a problem", rna_index + down_counter
                     break
             fbgn_id_dict[k]= uplist, downlist
 
-   # print "THIS IS FB ME:", fbgn_id_dict
-    #print len(fbgn_id_dict)
     return fbgn_id_dict
 
 def match_pp_to_gn():
@@ -372,36 +360,25 @@ def transcript_location(some_file):
         for line in f:
             if line.startswith('>'):
                 data = line.strip().split(';')
-                #print "This is data", data
                 id = re.findall('>(\S+)\w', data[0])
-                #print "This is id", id
                 chrom = re.findall('\W(loc=\S+):', data[1])
-                #might need to do some fancy stuff here. Like, if "join" is in location, do such and such", else" this other thing"                                                                         
                 location = re.findall('\Wloc=\S+:(\S+)', data[1])
-                #print "This is location", location
                 match = re.search('join', location[0])
                 if match:
-                    
                     ##MATCH join(8781076..8781272,8783212..8784440,8784501..8784970)
                     join_loc = re.findall('join\((\S+)\)', location[0])
-                    #print join_loc
-                    #print type(join_loc) # list
-                    #loc_list =[]
-                    
+
                     for i in join_loc:
-                    #print "i before split", i
                         no_comma = i.split(',')
-                        #print "This is no comma", no_comma
                     final_list = []
                     for j in no_comma:
                         loc_list = j.split('..')
-                        #print "This is loc_list", loc_list
                         for k in loc_list:
                             final_list.append(k)
                     print "this is final_list", final_list
             
                 else:
-                    #print "NOOOOOOO", location[0]
+                    print "NOOOOOOO", location[0]
                     loc = location[0].split('..')
                     print loc
             
@@ -409,9 +386,6 @@ def mel_gene_set(dict): # this uses the flanking genes, specifically
     """This function finds unique mel genes, and puts them in a set (what is returned), so we don't get the same coords twice. It takes fbgn_id_dict. This is so we have the mel genes that we need coordinates for in the non-mel species', ie we're using this to find the orthologs that we care about"""
     mel_gene_set = set()
     for k, v in dict.iteritems():
-        #v[0] is up, v[1] is down
-        print "this is v:", v
-        print "this is v[0]", v[0]
         for mg in v[0]:
             mel_gene_set.add(mg[0])
         for mj in v[1]:
@@ -422,7 +396,6 @@ mel_set =  mel_gene_set(super_dict)
 #print "This is mel_set", mel_set
 
 def map_mel_gene_to_nonmel_ortho(set):
-    ### good news: this appears to work. Something to consider, however.  Perhaps what you should do is have an additional point for "strandedness" (+ or -) and make sure that coord[0] is in fact the 'earliest base'
     """This function maps genes from mel_set to orthologs of nonmel species found in ortholog file, from flybase"""
    ### FBgn_ID[0]      GeneSymbol[1]      Arm/Scaffold[2]    Location[3]        Strand[4]  Ortholog_FBgn_ID[5]        Ortholog_GeneSymbol[6]     Ortholog_Arm/Scaffold[7]   Ortholog_Location[8]      Ortholog_Strand[9] OrthoDB_Group_ID[10]
 #so far it looks like this is already written as coord[0] is always smaller than coord[1], so you just did that and don't need to use it.
@@ -435,8 +408,6 @@ def map_mel_gene_to_nonmel_ortho(set):
             if not line.startswith('#') and not line.startswith('\n'):
                 data = line.strip().split('\t')
                 if fly in data[6]:
-#                    print data
- #                   quit()
                     if data[0] in set:
                         coord = data[8].split("..")
                         direction =data[9]
@@ -453,24 +424,34 @@ def map_mel_gene_to_nonmel_ortho(set):
     return mapping
 
 orthos_gene_map = map_mel_gene_to_nonmel_ortho(mel_set)
-#print "this is orthos_gene_map", orthos_gene_map
-for sk, sv in super_dict.iteritems():
-    print sk
-    for si in sv[0]:
-        print "upstream!"
-        upstr = sv[0]
-        for ui in upstr:
-            print ui[0], ui[1]
-            print orthos_gene_map[ui[0]]
-           # print "that should have been the otrholog"
-        print upstr
-    for sj in sv[1]:
-        print "downstream"
-        dwstr = sv[1]
-        print dwstr
-        for di in dwstr:
-            print di[0], di[1]
-            print orthos_gene_map[ui[0]]
-           # print "that should have been the downstream ortholog"
+def glance(d):
+    """This function shows you a few elements of the dictionary, or i guess a few key, value pairs? Whatever the right wordin is."""
+    return dict(itertools.islice(d.iteritems(), 3))
+
+print "super_dict subset:"
+print glance(super_dict)
+
+print "orthos_gene_map subset:"
+print glance(orthos_gene_map)
+
+##! save this for later
+#for sk, sv in super_dict.iteritems():
+#    print sk
+#    for si in sv[0]:
+#        for ui in upstr:
+#            print ui[0], ui[1]
+#            try:
+#                print orthos_gene_map[ui[0]]
+#            except KeyError:
+#                print "This guy is not in orthos_gene_map", ui[0]
+
+#    for sj in sv[1]:
+#        dwstr = sv[1]
+#        for di in dwstr:
+#            print di[0], di[1]
+#            try:
+#                print orthos_gene_map[ui[0]]
+#            except KeyError:
+#                print "Downstream dudette is not in orthos_gene_map", ui[0]
 
 quit()

@@ -20,11 +20,19 @@ import gc
 #sys.argv[1] = modified gff file (modified to only have gene and ncRNA)
 ## where/name out-take-2/1_dmel_protein_ncRNA_2017-01-04_out.txt
 ## made by what script? parse_gff3.py (in same directory as this script)#sys.argv[2]= protein fasta file
+<<<<<<< HEAD
 #sys.argv[3]= ortholog map file (from flybase)
 ##
 ##sys.argv[?] = ncRNA blast file of species of interest # this is wrong
 ## where/name
 #sys.argv[?] = protein blast file #this is wrong
+=======
+#sys.argv[3]= ortholog map file
+##
+##sys.argv[2] = ncRNA blast file of species of interest # this is wrong
+## where/name
+#sys.argv[3] = protein blast file #this is wrong
+>>>>>>> fd953f92a8e1f285317eac95d64137dbb70f4050
 ## where/name
 #rna_blast_file = sys.argv[2] # this has to change
 ## where/name
@@ -226,6 +234,11 @@ def indexing_location(rna_strand_dict, dict_chrom, p2g_dict): # I did something 
                     break
             fbgn_id_dict[k]= uplist, downlist
 
+<<<<<<< HEAD
+=======
+   # print "THIS IS FB ME:", fbgn_id_dict
+    #print len(fbgn_id_dict)
+>>>>>>> fd953f92a8e1f285317eac95d64137dbb70f4050
     return fbgn_id_dict
 
 def match_pp_to_gn():
@@ -386,6 +399,12 @@ def mel_gene_set(dict): # this uses the flanking genes, specifically
     """This function finds unique mel genes, and puts them in a set (what is returned), so we don't get the same coords twice. It takes fbgn_id_dict. This is so we have the mel genes that we need coordinates for in the non-mel species', ie we're using this to find the orthologs that we care about"""
     mel_gene_set = set()
     for k, v in dict.iteritems():
+<<<<<<< HEAD
+=======
+        #v[0] is up, v[1] is down
+        print "this is v:", v
+        print "this is v[0]", v[0]
+>>>>>>> fd953f92a8e1f285317eac95d64137dbb70f4050
         for mg in v[0]:
             mel_gene_set.add(mg[0])
         for mj in v[1]:
@@ -396,6 +415,10 @@ mel_set =  mel_gene_set(super_dict)
 #print "This is mel_set", mel_set
 
 def map_mel_gene_to_nonmel_ortho(set):
+<<<<<<< HEAD
+=======
+    ### good news: this appears to work. Something to consider, however.  Perhaps what you should do is have an additional point for "strandedness" (+ or -) and make sure that coord[0] is in fact the 'earliest base'
+>>>>>>> fd953f92a8e1f285317eac95d64137dbb70f4050
     """This function maps genes from mel_set to orthologs of nonmel species found in ortholog file, from flybase"""
    ### FBgn_ID[0]      GeneSymbol[1]      Arm/Scaffold[2]    Location[3]        Strand[4]  Ortholog_FBgn_ID[5]        Ortholog_GeneSymbol[6]     Ortholog_Arm/Scaffold[7]   Ortholog_Location[8]      Ortholog_Strand[9] OrthoDB_Group_ID[10]
 #so far it looks like this is already written as coord[0] is always smaller than coord[1], so you just did that and don't need to use it.
@@ -408,6 +431,11 @@ def map_mel_gene_to_nonmel_ortho(set):
             if not line.startswith('#') and not line.startswith('\n'):
                 data = line.strip().split('\t')
                 if fly in data[6]:
+<<<<<<< HEAD
+=======
+#                    print data
+ #                   quit()
+>>>>>>> fd953f92a8e1f285317eac95d64137dbb70f4050
                     if data[0] in set:
                         coord = data[8].split("..")
                         direction =data[9]
@@ -424,6 +452,7 @@ def map_mel_gene_to_nonmel_ortho(set):
     return mapping
 
 orthos_gene_map = map_mel_gene_to_nonmel_ortho(mel_set)
+<<<<<<< HEAD
 def glance(d):
     """This function shows you a few elements of the dictionary, or i guess a few key, value pairs? Whatever the right wordin is."""
     return dict(itertools.islice(d.iteritems(), 3))
@@ -453,5 +482,26 @@ print glance(orthos_gene_map)
 #                print orthos_gene_map[ui[0]]
 #            except KeyError:
 #                print "Downstream dudette is not in orthos_gene_map", ui[0]
+=======
+#print "this is orthos_gene_map", orthos_gene_map
+for sk, sv in super_dict.iteritems():
+    print sk
+    for si in sv[0]:
+        print "upstream!"
+        upstr = sv[0]
+        for ui in upstr:
+            print ui[0], ui[1]
+            print orthos_gene_map[ui[0]]
+           # print "that should have been the otrholog"
+        print upstr
+    for sj in sv[1]:
+        print "downstream"
+        dwstr = sv[1]
+        print dwstr
+        for di in dwstr:
+            print di[0], di[1]
+            print orthos_gene_map[ui[0]]
+           # print "that should have been the downstream ortholog"
+>>>>>>> fd953f92a8e1f285317eac95d64137dbb70f4050
 
 quit()
